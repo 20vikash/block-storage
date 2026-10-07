@@ -1,31 +1,56 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"net"
+
+	"github.com/pojntfx/go-nbd/pkg/server"
+)
 
 func main() {
-	v, err := OpenVolume("volume.img", 1024*1024*1024)
+	volume, err := OpenVolume("volume.img", 1024*1024*1024)
 	if err != nil {
 		panic(err)
 	}
-	defer v.Close()
+	defer volume.Close()
 
-	data := []byte("HELLO")
+	backend := NewNBDBackend(volume)
 
-	_, err = v.WriteAt(data, 4096)
+	listener, err := net.Listen("tcp", "127.0.0.1:10809")
 	if err != nil {
 		panic(err)
 	}
+	defer listener.Close()
 
-	if err := v.Flush(); err != nil {
-		panic(err)
+	fmt.Println("NBD server listening on 127.0.0.1:10809")
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			panic(err)
+		}
+
+		go func() {
+			defer conn.Close()
+
+			err := server.Handle(
+				conn,
+				[]*server.Export{
+					{
+						Name:        "volume",
+						Description: "Our first block store",
+						Backend:     backend,
+					},
+				},
+				&server.Options{
+					MinimumBlockSize:   512,
+					PreferredBlockSize: 4096,
+					MaximumBlockSize:   4096,
+				},
+			)
+			if err != nil {
+				fmt.Println("NBD connection error:", err)
+			}
+		}()
 	}
-
-	result := make([]byte, 5)
-
-	_, err = v.ReadAt(result, 4096)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("read:", string(result))
 }
