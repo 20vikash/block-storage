@@ -1,23 +1,18 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
 func main() {
-	v, err := OpenVolume("volume.img", 1024*1024*1024) // 1 GiB
+	v, err := OpenVolume("volume.img", 1024*1024*1024)
 	if err != nil {
 		panic(err)
 	}
 	defer v.Close()
 
-	data := make([]byte, 128*1024*1024)
+	data := []byte("HELLO")
 
-	for i := range data {
-		data[i] = 'A'
-	}
-
-	if err := v.WriteAt(0, data); err != nil {
+	_, err = v.WriteAt(data, 4096)
+	if err != nil {
 		panic(err)
 	}
 
@@ -25,9 +20,9 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("write returned")
+	result := make([]byte, 5)
 
-	result, err := v.ReadAt(4096, 5)
+	_, err = v.ReadAt(result, 4096)
 	if err != nil {
 		panic(err)
 	}

@@ -31,28 +31,20 @@ func OpenVolume(path string, size int64) (*Volume, error) {
 	}, nil
 }
 
-func (v *Volume) WriteAt(offset int64, data []byte) error {
-	if offset < 0 || offset+int64(len(data)) > v.size {
-		return fmt.Errorf("writeAt: offset out of bounds")
+func (v *Volume) WriteAt(p []byte, offset int64) (int, error) {
+	if offset < 0 || offset+int64(len(p)) > v.size {
+		return 0, fmt.Errorf("write out of bounds")
 	}
 
-	_, err := v.file.WriteAt(data, offset)
-	return err
+	return v.file.WriteAt(p, offset)
 }
 
-func (v *Volume) ReadAt(offset int64, length int) ([]byte, error) {
-	if offset < 0 || offset+int64(length) > v.size {
-		return nil, fmt.Errorf("readAt: offset out of bounds")
+func (v *Volume) ReadAt(p []byte, offset int64) (int, error) {
+	if offset < 0 || offset+int64(len(p)) > v.size {
+		return 0, fmt.Errorf("readAt: offset out of bounds")
 	}
 
-	buf := make([]byte, length)
-
-	_, err := v.file.ReadAt(buf, offset)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf, nil
+	return v.file.ReadAt(p, offset)
 }
 
 func (v *Volume) Flush() error {
